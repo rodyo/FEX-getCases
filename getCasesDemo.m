@@ -9,7 +9,7 @@
 % Name       : Rody P.S. Oldenhuis
 % E-mail     : oldenhuis@gmail.com    (personal)
 %              oldenhuis@luxspace.lu  (professional)
-% Affiliation: LuxSpace sàrl
+% Affiliation: LuxSpace sarl
 % Licence    : BSD
 
 
@@ -17,13 +17,18 @@
 % https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6G3S5UYM7HJ3N
 
 
-
 % Changelog
 %{
+2017/September/08
+    - Apparently, MATLAB no longer accepts function handles as cases in
+      switch blocks; adjusted accordingly    
+
 2013/November/06
-	Initial version
+	- Initial version
 %}
 function getCasesDemo
+
+    %#ok<*MDUPC>
     
     clc               
     value = true;
@@ -33,11 +38,10 @@ function getCasesDemo
         case false
         otherwise 
             disp('The cases are:')
-            cellfun(@disp, getCases)
+            cellfun(@disp, getCases())
     end
     disp(' ')
-    
-    
+        
     % and a switch WITHOUT an ''otherwise''
     switch value        
         case 'test'            
@@ -50,29 +54,27 @@ function getCasesDemo
             
         case true  
             disp('The cases are:')
-            cellfun(@disp, getCases)
+            cellfun(@disp, getCases())
             disp(' ')
             
         % This case is included as well
-        case {'test' '%\n%{'} 
+        case {'test' '%\n%{'}  
             
-    end
-    
+    end    
     
     % You can really use it anywhere. In a sub function:
     subFunction();
-        
-    
+            
     % Or a nested function:
     nestedFuntion();
     function nestedFuntion
         switch true
-            case {@tan}
+            case []
             case 'AnotherTest'
             case true
                 if true % call from WITHIN nested control structure
                     disp('The cases are:')
-                    cellfun(@disp, getCases)
+                    cellfun(@disp, getCases())
                     disp(' ')
                 end
                 
@@ -99,9 +101,9 @@ function getCasesDemo
     end
     disp(' ')
     
-    % Finally, since error messaging is expected to be the most common use case, 
-    % the 'error' option will pring a default error message listing all the
-    % cases: 
+    % Finally, since error messaging is expected to be the most common use 
+    % case, the 'error' option will pring a default error message listing 
+    % all the cases: 
     switch value                
         case uint8(9)
         case false
@@ -117,13 +119,13 @@ function getCasesDemo
 end
 
 % sub-function
-function subFunction
+function subFunction()
     switch true
-        case {@cos}           
+        case {[]}           
         case true
             if true % call from WITHIN nested control structure                
                 disp('The cases are:')
-                cellfun(@disp, getCases)
+                cellfun(@disp, getCases())
                 disp(' ')
             end            
         case 'TEST'

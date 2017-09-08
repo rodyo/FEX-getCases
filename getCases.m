@@ -70,35 +70,42 @@
 % Name       : Rody P.S. Oldenhuis
 % E-mail     : oldenhuis@gmail.com    (personal)
 %              oldenhuis@luxspace.lu  (professional)
-% Affiliation: LuxSpace sàrl
+% Affiliation: LuxSpace sarl
 % Licence    : BSD
-
 
 
 % Changelog
 %{
+2017/September/08
+    - Replaced the "builtin('_brace', ..." construct with a 
+      two-liner-temporary construct. This is to accomodate the removal of 
+      that undocumented functionality which was removed in R2015a.
+    - Changed 'error' calls from error() to throwAsCaller(), to give
+      a more intuitive error stack (excluding getCases() itself).
+
 2013/November/08
-	Included credits to Mohsen (oops...)
+	- Included credits to Mohsen (oops...)
 
 2013/November/06
-    First version that passes all tests        
-    Implemented 'error' and 'eval'
+    - First version that passes all tests        
+    - Implemented 'error' and 'eval'
 
 2013/July
-    Initial version
+    - Initial version
 %}
 function varargout = getCases(varargin)
-% If you find this work useful, please consider a donation:
-% https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6G3S5UYM7HJ3N
-
+    
+    % If you find this work useful, please consider a donation:
+    % https://www.paypal.me/Rodyo/3.5
 
     % First things first
     assert(nargin <= 2,...
-        'Too many input arguments.');    
+           'Too many input arguments.');    
     
     doEval  = false;
     doError = false;
     if nargin > 0
+        
         assert(all(cellfun('isclass', varargin, 'char')),...
             'All input arguments to GETCASES must be of type ''char''.');
         
@@ -106,20 +113,17 @@ function varargout = getCases(varargin)
         doError = any(strcmpi(varargin, 'error'));
         
         if doError && nargout ~= 0,...
-                error(...
-                [mfilename ':no_output'],...
-                'Too many output arguments');
+                error([mfilename ':no_output'],...
+                      'Too many output arguments');
         end
     end
-    
-    
+        
     % Find the callsite
     stack = dbstack('-completenames');
-    if numel(stack) < 2
-        error(...
-            [mfilename ':not_standalone'], ...
-            'GETCASES() must be called inside a switch structure within a script or a function.');
-    end
+    assert(numel(stack) >= 2,...
+           [mfilename ':not_standalone'], [...
+           'GETCASES() must be called inside a switch structure within a ',...
+           'script or a function.']);
     
     fileName = stack(2).file;
     callsite = stack(2).line;
@@ -128,36 +132,34 @@ function varargout = getCases(varargin)
     % Load relevant code   
     try
         fid = fopen(fileName);
+        OC  = onCleanup(@() any(fid==fopen('all')) && fclose(fid));
     catch ME 
-        ME2 = MException(...
-            [mfilename ':io_error'],...
-            'Could not open source file.');
+        ME2 = MException([mfilename ':io_error'],...
+                         'Could not open source file.');
         throw(addCause(ME2, ME));
-    end    
-    if fid < 0
-        error(...
-            [mfilename ':io_error'],...
-            'Could not open source file.'); 
-    end
+    end  
     
+    assert(fid >= 0,...
+           [mfilename ':io_error'],...
+           'Could not open source file.'); 
+        
     % Read all code
     try  
-        %code = builtin('_brace', textscan(fid, '%s', callsite, 'Delimiter', '\n'), 1);
-        code = builtin('_brace', textscan(fid, '%s', 'Delimiter', '\n'), 1);
-                
+        code = textscan(fid, '%s', 'Delimiter','\n');
+        code = code{1};
+        
         % Trim whitespace        
         code = regexprep(code, '^\s*', '');     % Remove leading whitespace
         code = regexprep(code, '\s*$', '');     % Remove trailing whitespace        
                         
     catch ME 
         fclose(fid);
-        ME2 = MException(...
-            [mfilename ':read_error'],...
-            'Could not read file.');
+        ME2 = MException([mfilename ':read_error'],...
+                         'Could not read file.');
         throw(addCause(ME2, ME));
     end
-    fclose(fid);
     
+    fclose(fid);    
     clear fid filename
     
     % We're going to shrink the code a lot. The callsite is a line number,
@@ -169,20 +171,23 @@ function varargout = getCases(varargin)
     
     % Remove block comments
     blockComments = ~cellfun('isempty', regexp(code(:,1), '^%{\s*$'));
-    if any(blockComments)        
+    if any(blockComments)    
+        
         blockStarts = find(blockComments);
-        blockEnds   = find(~cellfun('isempty', regexp(code(:,1), '^%}\s*$')));        
+        blockEnds   = find(~cellfun('isempty', regexp(code(:,1), '^%}\s*$')));
+        
         for ii = numel(blockStarts):-1:1
             inds = blockStarts(ii) : blockEnds(find(blockEnds>blockStarts(ii),1,'first'));
             code(inds,:) = [];
         end
+        
         clear blockEnds blockStarts inds ii
     end
     clear blockComments
         
     % Remove other comment lines
     code(:,1) = regexprep(code(:,1), '^%.*$', '');
-    code = code(~cellfun('isempty', code(:,1)),:);
+    code      = code(~cellfun('isempty', code(:,1)),:);
                     
     % Remove trailing comments    
     % NOTE: we have to be careful not to delete percent signs 
@@ -195,8 +200,8 @@ function varargout = getCases(varargin)
     % http://stackoverflow.com/questions/17359425/how-to-remove-trailing-comments-via-regexp
     %
     code(:,1) = regexprep(code(:,1), ...
-        '((^|\n)(([\]\)}\w.]''+|[^''%])+|''[^''\n]*(''''[^''\n]*)*'')*)[^\n]*',...
-        '$1');
+                          '((^|\n)(([\]\)}\w.]''+|[^''%])+|''[^''\n]*(''''[^''\n]*)*'')*)[^\n]*',...
+                          '$1');
         
     % Recombine all continued lines
     continued = regexp(code(:,1), '\.\.\..*');
@@ -208,8 +213,7 @@ function varargout = getCases(varargin)
             end
         end
     end
-    code = code(~cellfun('isempty', code(:,1)),:);
-    
+    code = code(~cellfun('isempty', code(:,1)),:);    
     clear continued
     
     % Remove any leading strings and other irrelevant code
@@ -221,11 +225,14 @@ function varargout = getCases(varargin)
     switchLines = findValidKeywords('switch\s');
     endLines    = findValidKeywords('end');   
     
-    if ~any(switchLines) || ~any(endLines) || ...
-            find(switchLines,1,'first')>find([code{:,2}]) || find(endLines,1,'last')<find([code{:,2}])
-        error(...
-            [mfilename ':not_in_switch'],...
-            'GETCASES() must be called from inside a ''switch'' control structure.');
+    if ~any(switchLines) || ...
+       ~any(endLines) || ...
+       find(switchLines,1,'first') > find([code{:,2}]) || ...
+       find(endLines,1,'last')     < find([code{:,2}])
+        
+        error([mfilename ':not_in_switch'], [...
+              'GETCASES() must be called from inside a ''switch'' control ',...
+              'structure.']);
     end
     
     % Remove everything before the first 'switch' and after the last 'end'
@@ -256,20 +263,23 @@ function varargout = getCases(varargin)
     
     % Traverse the code from the callsite up, until the first unmatched
     % 'switch' is found. Also detect any nested control structures. 
-    closed = 0;   
+    closed    = 0;   
     nestRange = {};
     unmatchedOpens = [];
     for line = find([code{:,2}])-1 : -1 : 1
+        
         if endLines(line)
             if ~closed
                 closeLine = line; end                
             closed = closed + endLines(line);             
-        end        
+        end   
+        
         if openLines(line)
             closed = closed - openLines(line); 
             if closed == 0
                 nestRange = [nestRange line:closeLine]; end  %#ok<AGROW>
         end
+        
         if closed < 0
             % We found an unmatched start of a control structure. 
             % If it is not a 'switch', save it for later
@@ -283,13 +293,14 @@ function varargout = getCases(varargin)
                 break;
             end  
         end
+        
     end
     
     % Invalid call site; repeat this error
     if closed >= 0
-        error(...
-            [mfilename ':not_in_switch'],...
-            'GETCASES() must be called from inside a ''switch'' control structure.');
+        error([mfilename ':not_in_switch'], [...
+              'GETCASES() must be called from inside a ''switch'' ',...
+              'control structure.']);
     end
     
     clear switchLines closed 
@@ -311,22 +322,25 @@ function varargout = getCases(varargin)
     opened = 0;   
     nestRange = {};
     for line = find([code{:,2}])+1 : size(code,1)
+        
         if openLines(line)
             if ~opened
                 openLine = line; end                
             opened = opened + openLines(line);             
-        end        
+        end  
+        
         if endLines(line)
             opened = opened - endLines(line); 
             if opened == 0
                 nestRange = [nestRange openLine:line]; end  %#ok<AGROW>
         end
+        
         if opened < 0
             % We've found an unmatched 'end'. Check if we have any leftover
             % unmatched opens from the previous loop
             if ~isempty(unmatchedOpens)
                 nestRange = [nestRange unmatchedOpens(end):line]; %#ok<AGROW>
-                unmatchedOpens(end) = [];                         %#ok<AGROW>
+                unmatchedOpens(end) = [];                         
                 opened = 0;
                 continue;
                 
@@ -335,6 +349,7 @@ function varargout = getCases(varargin)
                 break; 
             end   
         end
+        
     end
     
     % Chop off all code after the corresponding 'end'. Also, we don't need
@@ -358,9 +373,11 @@ function varargout = getCases(varargin)
     cases = regexprep(cases, '^\s+', '');
     
     % Evaluate all cases and/or issue error
-    if doEval  
+    if doEval
+        
         newCases = cases;
         success  = true;
+        
         for ii = 1:numel(cases)
             newCases{ii} = evalin('caller', newCases{ii});
             
@@ -369,37 +386,41 @@ function varargout = getCases(varargin)
             elseif isnumeric(newCases{ii}) || islogical(newCases{ii})
                 newCases{ii} = num2str(newCases{ii});                
             else
-                warning(...
-                    [mfilename ':toString_more_complex'],...
-                    'A datatype that is not readily converted to string was received. Not converting...');
+                warning([mfilename ':toString_more_complex'], [...
+                        'A datatype that is not readily converted to ',...
+                        'string was received. Not converting...']);
                 success = false;
                 break
             end
         end
+        
         if success
             cases = newCases; end
+        
         clear newCases success
     end
+    
     if doError   
         % Get the 'switch' value as well. 
         switchValue = regexp(code{1}, '[,;\s]*switch\s+([{}[]()''\w]*)[,\s]*$', 'tokens');
         switchValue = switchValue{1};
                 
         caseStr = cellfun(@(x)['''' regexprep(x,'%','%%') ''', '], ...
-            cases(1:end-1), 'UniformOutput', false);
+                          cases(1:end-1),...
+                          'UniformOutput', false);
         caseStr = cat(2, caseStr{:}, ' and ''', cases{end}, '''.');
         
         % TODO: num2str() is not sufficient
-        error(...
-            [mfilename ':invalid_case'],...
-            ['Unhandled case: ''%s''.\nValid cases are ' caseStr], ...
-            num2str(evalin('caller', switchValue{1})));
+        ME = MException([mfilename ':invalid_case'],...
+                        ['Unhandled case: ''%s''.\nValid cases are ' caseStr], ...
+                        num2str(evalin('caller', switchValue{1})));
+        throwAsCaller(ME);
     end
             
     % All done!       
     varargout{1} = cases;
     
-          
+    
     % Find valid keywords 
     function valids = findValidKeywords(keyword)
                 
@@ -416,6 +437,3 @@ function varargout = getCases(varargin)
     end
     
 end
-
-
-

@@ -13,7 +13,7 @@
 % Name       : Rody P.S. Oldenhuis
 % E-mail     : oldenhuis@gmail.com    (personal)
 %              oldenhuis@luxspace.lu  (professional)
-% Affiliation: LuxSpace sàrl
+% Affiliation: LuxSpace sï¿½rl
 % Licence    : BSD
 
 
@@ -24,17 +24,31 @@
 
 % Changelog
 %{
+2017/September/08
+    Apparently, MATLAB no longer accepts function handles as cases in
+    switch blocks; adjusted accordingly
+
 2013/November/06
 	Concocted a few more challenges
 
 2013/July
 	Initial version
 %}
-function getCasesTester
+function getCasesTester()
     
 % WARNING: THIS CODE IS OBFUSCATED FOR A REASON! DON'T 'CORRECT' IT; THAT
-% WOULD DESTROY IT'S PURPOSE
+% WOULD DESTROY ITS PURPOSE
 
+    %#ok<*ALIGN>    
+    %#ok<*EMFH>
+    %#ok<*EMNODEF>
+    %#ok<*EMNST>
+    %#ok<*EMTAG> 
+    %#ok<*EMTC>
+    %#ok<*MDUPC> 
+    %#ok<*NASGU>    
+    %#ok<*NOPRT>
+    %#ok<*VUNUS> 
     clc               
     value = true;
     
@@ -53,7 +67,7 @@ function getCasesTester
     switch value
         case false
         otherwise  
-            cases = getCases;
+            cases = getCases();
             disp('First challenge: should return ''false'':')
             cellfun(@disp, cases)
             disp(' ')
@@ -70,7 +84,7 @@ function getCasesTester
             
         case true            
             disp('Second challenge: should return ''test'' ''blah''  true  {''test'' ''%\n%{''}:')
-            cases = getCases;
+            cases = getCases();
             cellfun(@disp, cases)
             disp(' ')
             
@@ -79,18 +93,18 @@ function getCasesTester
     end
         
     % Calling INCORRECTLY from a nested function 
-    function nestedFunction_WRONG %#ok<EMNST>
+    function nestedFunction_WRONG 
         %#eml
         switch false
             case true
             otherwise
         end
         % OUTSIDE the switch though
-        cases = getCases;
+        cases = getCases();
     end
     
     disp('Third challenge: should give error (forcibly changed into warning):')
-    try %#ok<EMTC>
+    try
         nestedFunction_WRONG();
     catch ME
         warning(ME.message);
@@ -101,18 +115,18 @@ function getCasesTester
     
     % Calling correctly from a nested function 
     nestedFunction_correct();
-    function nestedFunction_correct %#ok<EMNST>
+    function nestedFunction_correct() 
         %#eml 
         
         % switch WITHOUT otherwise
         switch value
-            case {@cos}
+            case {[]}
                 if false
                     % nested control structure
                 end
             case true
                 disp('Fourth challenge: should give {@cos}  true  {}:')
-                cases = getCases;
+                cases = getCases();
                 cellfun(@disp, cases)
                 disp(' ')
                 
@@ -136,7 +150,7 @@ function getCasesTester
     
     % Calling INCORRECTLY from a subfunction 
     disp('Fifth challenge: should give error (forcibly changed into warning):')    
-    try %#ok<EMTC>
+    try 
         subFunction_WRONG();
     catch ME
         warning(ME.message);
@@ -158,7 +172,7 @@ function getCasesTester
                     case true % trailing comment that's harder to remove 
                         
                         % More regex tests
-                        switchcaseotherwise = 5;
+                        switchcaseotherwise = 5; 
                         switch_case_otherwise = 5;
                         
                         % We might be dealing with nested switches
@@ -179,7 +193,7 @@ function getCasesTester
                             %end
                             
                             % Some other random weird stuff:
-                            '%',switch value
+                            '%',switch value 
                                 case []
                             end
                             5;rand(4);switch value
@@ -194,21 +208,21 @@ function getCasesTester
                             % another possible code obfuscation
                             disp test, otherwise%regex-unfriendly comments
                                 disp('Seventh challenge: should give ''tesT''  ''blah1''  ''blah2'':')
-                                cases = getCases;
+                                cases = getCases();
                                 cellfun(@disp, cases)
                                 disp(' ')                                                           
                         end
                         
                     otherwise   
-                        while ijk == 7, end                        
+                        while ijk == 7, end
                 end
             end
             
             % SEVERELY obfuscated versions of a switch
             % PLEASE, never ever write like this, anywhere!
-            '''yes'' ''this'' ''is'' ''valid''';switch true,case {uint8(6) @(x)x.^2}, case true  %#ok<ALIGN,EMFH>
+            '''yes'' ''this'' ''is'' ''valid''';switch true,case {uint8(6) {}}, case true  
                 disp('Eighth challenge: should give  {uint8(6) @(x)x.^2}  true:')
-                cases = getCases;
+                cases = getCases();
                 cellfun(@disp, cases)
                 disp(' ')
             end
@@ -216,10 +230,10 @@ function getCasesTester
             
             
             % Fools are just so damn clever; MORE obfuscation!
-            if ~strcmp('otherwise WRONG',' switch WRONG'), switch value  %#ok<ALIGN>
+            if ~strcmp('otherwise WRONG',' switch WRONG'), switch value  
                                         
                     % Some nasty cases:
-                    case {'test', '%' @cos}, case '%12.2f'%WITH trailing comment, of course
+                    case {'test', '%' {}}, case '%12.2f'%WITH trailing comment, of course
                         
                         
                     % some fun with line continuations
@@ -241,8 +255,8 @@ function getCasesTester
                         
                         % SEVERELY obfuscated versions thereof. 
                         % PLEASE, never ever write like this, anywhere!
-                        '''this'' ''is'' ''valid'''              ,switch true,case true,disp('I love illegible code'),end
-                        ['''but''', '''really''', '''annoying'''];switch true,case true,disp('I love illegible code'),end
+                        '''this'' ''is'' ''valid'''              ,switch true,case true,disp('I love illegible code'),end 
+                        ['''but''', '''really''', '''annoying'''];switch true,case true,disp('I love illegible code'),end 
                         
                     % Empties are always a great source of bugs
                     case {}
@@ -276,29 +290,27 @@ function getCasesTester
     end    
 end
 
-
-
 % sub-function
-function subFunction_WRONG %#eml
+function subFunction_WRONG() %#eml
     switch false
         case true
         otherwise
     end
     % OUTSIDE the switch though
-    cases = getCases;
+    cases = getCases();
 end
 
 %another sub-function; correct way
-function subFunction_correct
+function subFunction_correct()
     switch true
-        case {@cos}
+        case []
             if false
                 % nested control structure
             end
         case true
             if true % call from WITHING nested control structure
                 disp('Sixth challenge: should give {@cos} true ''TEST'':')
-                cases = getCases;
+                cases = getCases();
                 cellfun(@disp, cases)
                 disp(' ')
             end
